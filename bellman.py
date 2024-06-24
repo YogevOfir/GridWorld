@@ -1,14 +1,15 @@
 import copy
+import pandas as pd
 
-STEP = -0.04 # constant reward for non-terminal states
+STEP = -1 # constant reward for non-terminal states
 DISCOUNT = 0.5
-MAX_ERROR = 0.0001
+MAX_ERROR = 0.01
 NUM_ACTIONS = 4
 P = 0.8  # probability for chosen action
 ACTIONS = [(1, 0), (0, -1), (-1, 0), (0, 1)] # Down, Left, Up, Right
-W = 4
-H = 3
-REWARDS = [(1, 1, 0), (3, 2, 1), (3, 1, -1)]
+W = 12
+H = 4
+REWARDS = [(1,1,0),(3,2,1),(3,1,-1)]
 
 def initial_mdp(W,H,rewards):
     V = [[0 for _ in range(W)] for _ in range(H)]
@@ -39,7 +40,7 @@ def get_utility(V, r, c, a, rewards):
     dr, dc = ACTIONS[a]
     newR, newC = r+dr, c+dc
     # if newR or newC is out of bounds or the new state is a wall, or the new state is a WALL (newR, newC) in REWARDS and val == 0
-    if newR < 0 or newC < 0 or newR >= H or newC >= W or ((newR, newC) in [(py, px) for px, py, val in rewards if val == 0]):
+    if newR < 0 or newC < 0 or newR >= H or newC >= W or ((newR, newC) in [(py, px) for px, py, in get_Walls(rewards)]):
         return V[r][c]
     else:
         return V[newR][newC]
@@ -57,15 +58,15 @@ def value_iteration(V, rewards):
     print("During the value iteration:\n")
     count = 0
     while True:
-        nextV = copy.deepcopy(V)
         error = 0
         for r in range(H):
             for c in range(W):
+                nextV = V[r][c]
                 if (r,c) in [(py,px) for px,py,val in rewards]:
                     continue
-                nextV[r][c] = max([calculate_utility(V, r, c, a) for a in range(NUM_ACTIONS)]) # Bellman update
-                error = max(error, abs(nextV[r][c]-V[r][c]))
-        V = nextV
+                V[r][c] = max([calculate_utility(V, r, c, a) for a in range(NUM_ACTIONS)]) # Bellman update
+                error = max(error, abs(nextV-V[r][c]))
+        # V = nextV
         printEnvironment(V, rewards)
         if error < MAX_ERROR:
             print("Converged after " + str(count) + " iterations")
@@ -88,7 +89,12 @@ def get_policy(V, rewards):
                     maxAction, maxU = action, u
             policy[r][c] = maxAction
     return policy
-    
+
+def get_Walls(rewards):
+    return [(x, y) for x, y, val in rewards if val == 0]
+
+def get_Rewards(rewards):
+    return [(x, y, val) for x, y, val in rewards if val != 0]
     
     
 def upside_down(rewards):

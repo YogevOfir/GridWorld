@@ -3,14 +3,14 @@ import numpy as np
 import math
 
 # Constants
-STEP = -0.04  # constant reward for non-terminal states
+STEP = -1  # constant reward for non-terminal states
 DISCOUNT = 0.5
 NUM_ACTIONS = 4
+P = 0.8 # probability for chosen action
 ACTIONS = [(1, 0), (0, -1), (-1, 0), (0, 1)]  # Down, Left, Up, Right
 W = 4
 H = 3
-REWARDS = [(1, 1, 0), (3, 2, 1), (3, 1, -1)]
-
+REWARDS = [(1,1,0),(3,2,1),(3,1,-1)]
 # Parameters for Boltzmann exploration
 TEMPERATURE = 1
 TEMPERATURE_DECAY = 0.99
@@ -43,6 +43,18 @@ def get_next_state(state, action, rewards):
     else:
         return (newR, newC)
 
+def calculate_utility(Q, state, action, rewards):
+    r, c = state
+    # print(action)
+    expected_utility = STEP
+    for delta_action in [-1, 0, 1]:
+        new_action = (action + delta_action) % NUM_ACTIONS
+        prob = P if delta_action == 0 else (1 - P) / 2
+        next_state = get_next_state(state, new_action, rewards)
+        next_r, next_c = next_state
+        expected_utility += prob * (R_grid[next_r][next_c] + DISCOUNT * np.max(Q[next_r][next_c]))
+    return expected_utility
+
 # Learn MDP from experiences
 def learn_mdp_from_experience(experience, W, H):
     T = np.zeros((H, W, NUM_ACTIONS, H, W))
@@ -60,11 +72,11 @@ def learn_mdp_from_experience(experience, W, H):
                 if N[r, c, a] > 0:
                     R[r, c, a] /= N[r, c, a]
                     T[r, c, a] /= N[r, c, a]
-    
+                    
     return T, R
 
 # Solve MDP to obtain policy
-def value_iteration(T, R, DISCOUNT, threshold=1e-4):
+def value_iteration(T, R, DISCOUNT, threshold=0.01):
     V = np.zeros((H, W))
     policy = np.zeros((H, W), dtype=int)
     while True:
@@ -83,7 +95,6 @@ def value_iteration(T, R, DISCOUNT, threshold=1e-4):
 
 # Iterative policy learning algorithm with Boltzmann exploration
 def iterative_policy_learning(W, H, rewards, Q):
-    # Q = [[[0 for _ in range(NUM_ACTIONS)] for _ in range(W)] for _ in range(H)]
     experience = []
     temperature = TEMPERATURE
     k = 0
@@ -91,10 +102,10 @@ def iterative_policy_learning(W, H, rewards, Q):
     while True:
         k += 1
         state = (random.randint(0, H - 1), random.randint(0, W - 1))
-        while state in [(py, px) for px, py, val in rewards if val != STEP]:
+        while state in [(py, px) for px, py, val in rewards if val != 0]:
             state = (random.randint(0, H - 1), random.randint(0, W - 1))
 
-        for _ in range(100):  # Choose a suitable number of steps for each episode
+        for _ in range(10000):  # Choose a suitable number of steps for each episode
             action = boltzmann_exploration(Q, state, temperature)
             next_state = get_next_state(state, action, rewards)
             reward = R_grid[next_state[0]][next_state[1]]
@@ -109,9 +120,8 @@ def iterative_policy_learning(W, H, rewards, Q):
         for r in range(H):
             for c in range(W):
                 for a in range(NUM_ACTIONS):
-                    q_value = sum(T[r, c, a, r2, c2] * (R_mdp[r, c, a] + DISCOUNT * Q[r2][c2][np.argmax(Q[r2][c2])])
-                                  for r2 in range(H) for c2 in range(W))
-                    if abs(Q[r][c][a] - q_value) > 1e-4:
+                    q_value = calculate_utility(Q, (r, c), a, rewards)
+                    if abs(Q[r][c][a] - q_value) > 0.01:
                         policy_stable = False
                     Q[r][c][a] = q_value
 
@@ -141,8 +151,7 @@ def print_environment(arr, rewards, policy=False):
         res += "\n"
     print(res)
 
-# Main function
-# Main function
+
 # Main function
 if __name__ == "__main__":
     rewards = [(x, H - 1 - y, val) for x, y, val in REWARDS]
@@ -164,4 +173,3 @@ if __name__ == "__main__":
     # Print policy
     print("The optimal policy is:\n")
     print_environment(policy, rewards, True)
-

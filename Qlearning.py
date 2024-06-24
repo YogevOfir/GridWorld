@@ -2,20 +2,20 @@ import random
 import copy
 
 # Constants
-STEP = -0.04  # constant reward for non-terminal states
+STEP = -1  # constant reward for non-terminal states
 DISCOUNT = 0.5
 NUM_ACTIONS = 4
 # P = 0.8  # probability for chosen action
 ACTIONS = [(1, 0), (0, -1), (-1, 0), (0, 1)]  # Down, Left, Up, Right
-W = 4
-H = 3
-REWARDS = [(1, 1, 0), (3, 2, 1), (3, 1, -1)]
+W = 12
+H = 4
+REWARDS = [(1,0,-100),(2,0,-100),(3,0,-100),(4,0,-100),(5,0,-100),(6,0,-100),(7,0,-100),(8,0,-100),(9,0,-100),(10,0,-100),(11,0,1)]
 
 # Parameters for Q-learning
 LEARNING_RATE = 0.01
 EPSILON = 0.01
 EPSILON_DECAY = 0.995
-EPISODES = 1000
+EPISODES = 100000
 
 RANDOM_SEED = 42
 random.seed(RANDOM_SEED)
@@ -55,7 +55,7 @@ def q_learning(Q, rewards):
         while state not in [(py, px) for px, py, val in rewards if val != STEP]:
             action = epsilon_greedy(Q, state, epsilon)  # Pass epsilon
             next_state = get_next_state(state, action, rewards)
-            reward = R[next_state[0]][next_state[1]]
+            reward = R[next_state[0]][next_state[1]] 
             best_next_action = max(Q[next_state[0]][next_state[1]])
             Q[state[0]][state[1]][action] += LEARNING_RATE * (reward + DISCOUNT * best_next_action - Q[state[0]][state[1]][action])
             state = next_state
